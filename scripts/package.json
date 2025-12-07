@@ -1,0 +1,12 @@
+{
+  "name": "schema-analyzer",
+  "version": "1.0.0",
+  "description": "Database schema analyzer for prompt strategy generation",
+  "main": "analyze-schema.js",
+  "scripts": {
+    "analyze": "node analyze-schema.js"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
+  }
+}
