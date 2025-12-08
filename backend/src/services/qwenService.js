@@ -267,8 +267,11 @@ Instructions:
 4. If results are large, summarize the main points
 5. Use numbers, percentages, and comparisons where relevant
 6. Be concise but informative
+7. **IMPORTANT**: All currency values must be displayed in Malaysian Ringgit (MYR) using the symbol "RM". For example: RM 1,234.56 or RM 1,234,567.89
+8. Format tables using proper markdown table syntax with pipes (|) and alignment
+9. Use markdown formatting for better readability (headers, lists, tables)
 
-Provide a clear, natural language answer:`;
+Provide a clear, natural language answer with proper currency formatting (RM) and markdown tables:`;
 
   const messages = [
     { role: 'system', content: 'You are a helpful data analyst. Provide clear, natural language answers.' },

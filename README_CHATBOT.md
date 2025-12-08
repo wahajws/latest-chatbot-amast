@@ -111,3 +111,4 @@ The chatbot uses a **three-stage process**:
 - Large result sets are automatically limited to 1000 rows
 - Year-partitioned tables are automatically selected based on date ranges
 
+

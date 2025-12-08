@@ -106,3 +106,4 @@ VITE_APP_VERSION=1.0.0
 - ✅ All database credentials configured
 - ✅ Qwen API credentials configured
 
+

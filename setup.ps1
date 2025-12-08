@@ -47,3 +47,4 @@ Write-Host "   3. Start backend: cd backend; npm start"
 Write-Host "   4. Start frontend: cd frontend; npm run dev"
 Write-Host ""
 
+

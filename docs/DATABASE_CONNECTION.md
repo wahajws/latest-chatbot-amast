@@ -120,3 +120,4 @@ Once the schema is analyzed:
 2. Check `output/prompt-strategy.json` for prompt engineering recommendations
 3. Use `output/database-schema.json` in your application for schema-aware query generation
 
+

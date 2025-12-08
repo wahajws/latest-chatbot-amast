@@ -230,3 +230,4 @@ If you cannot connect directly, you can:
 
 **Note**: The script itself is working correctly. The issue is network connectivity to the database server.
 
+

@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 // Import syntax highlighter styles
 let vscDarkPlus;
@@ -36,6 +37,7 @@ function ChatArea({ messages, loading, messagesEndRef, onEditSql }) {
               ) : (
                 <div className="assistant-message">
                   <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
                     components={{
                       code({ node, inline, className, children, ...props }) {
                         const match = /language-(\w+)/.exec(className || '');
@@ -54,6 +56,18 @@ function ChatArea({ messages, loading, messagesEndRef, onEditSql }) {
                           </code>
                         );
                       },
+                      table: ({ node, children, ...props }) => (
+                        <div className="chat-table-wrapper">
+                          <table className="chat-table" {...props}>
+                            {children}
+                          </table>
+                        </div>
+                      ),
+                      thead: ({ node, ...props }) => <thead className="chat-thead" {...props} />,
+                      tbody: ({ node, ...props }) => <tbody className="chat-tbody" {...props} />,
+                      tr: ({ node, ...props }) => <tr className="chat-tr" {...props} />,
+                      th: ({ node, ...props }) => <th className="chat-th" {...props} />,
+                      td: ({ node, ...props }) => <td className="chat-td" {...props} />,
                     }}
                   >
                     {message.message}

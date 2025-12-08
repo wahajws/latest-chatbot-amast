@@ -76,3 +76,4 @@ The backend automatically creates an admin user on first startup:
 - Explore the admin panel (if admin user)
 - Review documentation in `docs/` folder
 
+

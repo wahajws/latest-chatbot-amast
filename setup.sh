@@ -45,3 +45,4 @@ echo "   3. Start backend: cd backend && npm start"
 echo "   4. Start frontend: cd frontend && npm run dev"
 echo ""
 
+

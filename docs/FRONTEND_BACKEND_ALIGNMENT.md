@@ -206,3 +206,4 @@ This document outlines the alignment fixes made to ensure the frontend and backe
 - SQL queries are validated (SELECT only) before execution
 - Query results are limited to 100 rows for response size
 
+

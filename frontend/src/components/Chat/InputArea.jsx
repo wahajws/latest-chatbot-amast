@@ -71,3 +71,4 @@ function InputArea({ onSendMessage, loading }) {
 
 export default InputArea;
 
+

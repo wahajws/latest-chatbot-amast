@@ -79,3 +79,4 @@ function SqlEditor({ sqlQuery, originalQuestion, onExecute, onClose }) {
 
 export default SqlEditor;
 
+
