@@ -1,7 +1,26 @@
 import axios from 'axios';
 
+// Function to get API URL based on environment
+const getApiUrl = () => {
+  let currentHost = 'localhost';
+  let protocol = 'http:';
+  
+  // If we are in the browser, use a relative path that Nginx will handle.
+  if (typeof window !== 'undefined' && window.location) {
+    return '/api/';
+  }
+  
+  // Use environment variable if set
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  
+  // Default to localhost
+  return 'http://localhost:4000';
+};
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: getApiUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
