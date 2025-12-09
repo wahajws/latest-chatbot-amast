@@ -74,13 +74,27 @@ async function executeQuery(sqlQuery, identifiedTables = [], userId = null, sess
 // Process a chat message
 async function processMessage(userId, sessionId, userQuestion, chatHistory = []) {
   try {
+    // Check if it's a greeting or non-data query
+    const lowerQuestion = userQuestion.toLowerCase().trim();
+    const greetings = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'greetings'];
+    const isGreeting = greetings.some(g => lowerQuestion === g || lowerQuestion.startsWith(g + ' '));
+    
+    if (isGreeting) {
+      return {
+        success: true,
+        answer: 'Hello! I\'m your AMAST sales data assistant. I can help you query your database and analyze sales data. Try asking me questions like:\n\n- "Show me total sales this month"\n- "What are the top selling products?"\n- "How many invoices were created last week?"\n- "Show me revenue by outlet"\n\nWhat would you like to know?',
+        sqlQuery: null,
+        queryResult: null,
+      };
+    }
+    
     // Stage 1: Identify tables
     const identifiedTables = await identifyTables(userQuestion, chatHistory);
     
     if (identifiedTables.length === 0) {
       return {
         success: false,
-        answer: 'I could not identify any relevant tables for your question. Please try rephrasing.',
+        answer: 'I couldn\'t identify any relevant database tables for your question. Please try asking about:\n\n- Sales data (invoices, revenue, transactions)\n- Products and inventory\n- Outlets and customers\n- Delivery orders\n- Credit notes\n\nFor example: "Show me total sales this month" or "What are the top 10 products by revenue?"',
         sqlQuery: null,
         queryResult: null,
       };
