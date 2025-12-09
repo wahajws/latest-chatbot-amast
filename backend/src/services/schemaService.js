@@ -10,6 +10,7 @@ function loadSchemaFromCache() {
     // Try multiple possible paths
     const possiblePaths = [
       process.env.SCHEMA_CACHE_PATH,
+      '/opt/chatbot/latest-chatbot-amast/output/database-schema.json', // Absolute path for server
       path.join(__dirname, '../../../output/database-schema.json'), // From backend/src/services to project root
       path.join(__dirname, '../../output/database-schema.json'),   // From backend/src/services (fallback)
       path.join(process.cwd(), 'output/database-schema.json'),    // From current working directory
