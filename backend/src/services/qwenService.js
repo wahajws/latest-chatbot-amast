@@ -82,7 +82,11 @@ Return ONLY the JSON, no other text.`;
   ];
   
   try {
+    console.log(`🔍 Calling Qwen API for table identification. Question: "${userQuestion}"`);
+    console.log(`   Schema summary length: ${schemaSummary.length} tables`);
     const response = await callQwenAPI(messages, 0.3);
+    console.log(`   Qwen API response length: ${response.length} characters`);
+    console.log(`   Response preview: ${response.substring(0, 200)}...`);
     
     // Extract JSON from response
     let jsonText = response.trim();
@@ -92,10 +96,14 @@ Return ONLY the JSON, no other text.`;
       jsonText = jsonText.split('```')[1].split('```')[0].trim();
     }
     
+    console.log(`   Extracted JSON: ${jsonText.substring(0, 200)}...`);
     const result = JSON.parse(jsonText);
-    return result.tables || [];
+    const tables = result.tables || [];
+    console.log(`✅ Identified ${tables.length} tables: ${tables.slice(0, 5).join(', ')}${tables.length > 5 ? '...' : ''}`);
+    return tables;
   } catch (error) {
-    console.error('Error in table identification:', error.message);
+    console.error('❌ Error in table identification:', error.message);
+    console.error('   Error stack:', error.stack);
     return [];
   }
 }
