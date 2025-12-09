@@ -36,7 +36,13 @@ function loadSchemaFromCache() {
 // Get cached schema
 function getSchema() {
   if (!cachedSchema) {
+    console.log('⚠️  Schema cache is null, attempting to reload...');
     cachedSchema = loadSchemaFromCache();
+    if (!cachedSchema) {
+      console.error('❌ Failed to load schema in getSchema()');
+    } else {
+      console.log(`✅ Schema reloaded successfully: ${cachedSchema.total_tables} tables`);
+    }
   }
   return cachedSchema;
 }
@@ -44,7 +50,10 @@ function getSchema() {
 // Create lightweight schema summary for Stage 1
 function createSchemaSummary() {
   const schema = getSchema();
-  if (!schema) return [];
+  if (!schema) {
+    console.error('❌ createSchemaSummary(): Schema is null, returning empty array');
+    return [];
+  }
   
   return schema.tables.map(table => {
     const yearPartitions = schema.tables
