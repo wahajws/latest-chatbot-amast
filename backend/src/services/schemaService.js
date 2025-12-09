@@ -18,11 +18,22 @@ function loadSchemaFromCache() {
     ].filter(Boolean);
     
     for (const schemaPath of possiblePaths) {
-      if (fs.existsSync(schemaPath)) {
-        const schemaData = fs.readFileSync(schemaPath, 'utf8');
-        cachedSchema = JSON.parse(schemaData);
-        console.log(`✅ Loaded schema from cache: ${cachedSchema.total_tables} tables (from ${schemaPath})`);
-        return cachedSchema;
+      console.log(`🔍 Checking path: ${schemaPath}`);
+      const exists = fs.existsSync(schemaPath);
+      console.log(`   Exists: ${exists}`);
+      if (exists) {
+        try {
+          console.log(`   Reading file...`);
+          const schemaData = fs.readFileSync(schemaPath, 'utf8');
+          console.log(`   File size: ${schemaData.length} characters`);
+          console.log(`   Parsing JSON...`);
+          cachedSchema = JSON.parse(schemaData);
+          console.log(`✅ Loaded schema from cache: ${cachedSchema.total_tables} tables (from ${schemaPath})`);
+          return cachedSchema;
+        } catch (error) {
+          console.error(`   ❌ Error reading/parsing ${schemaPath}:`, error.message);
+          continue;
+        }
       }
     }
     
