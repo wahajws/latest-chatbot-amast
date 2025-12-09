@@ -49,12 +49,17 @@ function loadSchemaFromCache() {
 function getSchema() {
   if (!cachedSchema) {
     console.log('⚠️  Schema cache is null, attempting to reload...');
+    console.log(`   Current working directory: ${process.cwd()}`);
+    console.log(`   __dirname: ${__dirname}`);
     cachedSchema = loadSchemaFromCache();
     if (!cachedSchema) {
       console.error('❌ Failed to load schema in getSchema()');
+      console.error('   This will cause table identification to fail!');
     } else {
       console.log(`✅ Schema reloaded successfully: ${cachedSchema.total_tables} tables`);
     }
+  } else {
+    console.log(`✅ Using cached schema: ${cachedSchema.total_tables} tables`);
   }
   return cachedSchema;
 }
