@@ -112,3 +112,5 @@ The chatbot uses a **three-stage process**:
 - Year-partitioned tables are automatically selected based on date ranges
 
 
+
+

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './InputArea.css';
 
-function InputArea({ onSendMessage, loading }) {
+function InputArea({ onSendMessage, loading, disabled = false }) {
   const [message, setMessage] = useState('');
   const textareaRef = useRef(null);
 
@@ -14,7 +14,7 @@ function InputArea({ onSendMessage, loading }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (message.trim() && !loading) {
+    if (message.trim() && !loading && !disabled) {
       onSendMessage(message.trim());
       setMessage('');
       if (textareaRef.current) {
@@ -39,14 +39,14 @@ function InputArea({ onSendMessage, loading }) {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Message AMAST Chatbot..."
+            placeholder={disabled ? "Please select a database in Settings first" : "Message AMAST Chatbot..."}
             rows={1}
-            disabled={loading}
+            disabled={loading || disabled}
             className="message-input"
           />
           <button
             type="submit"
-            disabled={!message.trim() || loading}
+            disabled={!message.trim() || loading || disabled}
             className="send-button"
           >
             {loading ? (
@@ -70,5 +70,6 @@ function InputArea({ onSendMessage, loading }) {
 }
 
 export default InputArea;
+
 
 

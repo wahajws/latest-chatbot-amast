@@ -23,3 +23,5 @@ console.log('\nCalling createSchemaSummary()...');
 const summary = schemaService.createSchemaSummary();
 console.log('Summary length:', summary.length);
 
+
+

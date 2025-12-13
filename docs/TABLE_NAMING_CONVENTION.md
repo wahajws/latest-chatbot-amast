@@ -47,3 +47,5 @@ All database queries have been updated to use the new table names:
 If you have existing data in old tables (`chat_sessions`, `chat_messages`, `system_logs`), you may need to migrate the data to the new tables. The application will create the new tables automatically on startup.
 
 
+
+

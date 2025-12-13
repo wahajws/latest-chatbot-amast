@@ -1,69 +1,134 @@
 const { query } = require('../config/database');
 const { identifyTables, generateSQL, refineResults } = require('./qwenService');
 const { pool } = require('../config/database');
+const { getPoolForDatabase, getDatabaseById } = require('./databaseManager');
 const logger = require('./loggerService');
 
 // Validate SQL query
 function validateSQL(sql) {
   const upperSQL = sql.toUpperCase().trim();
   
-  // Check for dangerous operations
-  const dangerous = ['DROP', 'DELETE', 'UPDATE', 'INSERT', 'ALTER', 'TRUNCATE', 'CREATE', 'GRANT', 'REVOKE'];
-  if (dangerous.some(op => upperSQL.includes(op))) {
-    return { valid: false, error: 'SQL contains dangerous operation' };
-  }
-  
   // Must start with SELECT
   if (!upperSQL.startsWith('SELECT')) {
     return { valid: false, error: 'SQL must be a SELECT query' };
+  }
+  
+  // Check for dangerous operations - but only as SQL keywords, not in string literals
+  // Remove string literals (single and double quoted strings) before checking
+  const dangerous = ['DROP', 'DELETE', 'UPDATE', 'INSERT', 'ALTER', 'TRUNCATE', 'CREATE', 'GRANT', 'REVOKE'];
+  
+  // Remove string literals to avoid false positives
+  // This regex removes single-quoted strings: '...' and double-quoted strings: "..."
+  let sqlWithoutStrings = upperSQL;
+  
+  // Remove single-quoted strings (handles escaped quotes)
+  sqlWithoutStrings = sqlWithoutStrings.replace(/'([^']|'')*'/g, '');
+  
+  // Remove double-quoted strings (handles escaped quotes)
+  sqlWithoutStrings = sqlWithoutStrings.replace(/"([^"]|"")*"/g, '');
+  
+  // Check for dangerous operations in the SQL without string literals
+  // Use word boundaries to match only complete keywords
+  for (const op of dangerous) {
+    // Match the keyword as a whole word (not part of another word)
+    // Check if it appears as a standalone SQL keyword (preceded by whitespace, newline, or start of string)
+    const regex = new RegExp(`(^|\\s|\\n|\\r)${op}(\\s|;|$|\\n|\\r)`, 'i');
+    if (regex.test(sqlWithoutStrings)) {
+      return { valid: false, error: `SQL contains dangerous operation: ${op}` };
+    }
   }
   
   return { valid: true };
 }
 
 // Execute SQL query with error handling and retry logic
-async function executeQuery(sqlQuery, identifiedTables = [], userId = null, sessionId = null) {
+async function executeQuery(sqlQuery, identifiedTables = [], userId = null, sessionId = null, databaseId = null) {
   const startTime = Date.now();
   try {
-    // Use a separate client for read-only queries to the main database
-    const client = await pool.connect();
-    try {
-      const result = await client.query(sqlQuery);
+    // Get the appropriate connection pool
+    let queryPool = pool;
+    let dbType = 'postgresql';
+    if (databaseId) {
+      queryPool = await getPoolForDatabase(databaseId);
+      const db = await getDatabaseById(databaseId);
+      if (db) {
+        dbType = db.database_type || 'postgresql';
+      }
+    }
+    
+    if (dbType === 'mysql') {
+      // MySQL query execution
+      const [rows, fields] = await queryPool.query(sqlQuery);
       const duration = Date.now() - startTime;
-      logger.logSQL(sqlQuery, userId, sessionId, duration, result.rowCount);
+      logger.logSQL(sqlQuery, userId, sessionId, duration, Array.isArray(rows) ? rows.length : 0);
       return {
-        rowCount: result.rowCount,
-        rows: result.rows,
-        columns: result.fields.map(f => f.name),
+        rowCount: Array.isArray(rows) ? rows.length : 0,
+        rows: Array.isArray(rows) ? rows : [],
+        columns: fields ? fields.map(f => f.name) : [],
       };
-    } finally {
-      client.release();
+    } else {
+      // PostgreSQL query execution
+      const client = await queryPool.connect();
+      try {
+        const result = await client.query(sqlQuery);
+        const duration = Date.now() - startTime;
+        logger.logSQL(sqlQuery, userId, sessionId, duration, result.rowCount);
+        return {
+          rowCount: result.rowCount,
+          rows: result.rows,
+          columns: result.fields.map(f => f.name),
+        };
+      } finally {
+        client.release();
+      }
     }
   } catch (error) {
     const duration = Date.now() - startTime;
     logger.logSQL(sqlQuery, userId, sessionId, duration, 0, error);
     
     // Check if it's a column error that we can try to fix
-    if (error.message.includes('does not exist') || error.message.includes('column')) {
+    if (error.message.includes('does not exist') || error.message.includes('column') || error.message.includes('Unknown column')) {
       logger.info('🔄 Column error detected, attempting to fix...', { userId, sessionId });
       // Try to fix SQL using Qwen
       const { fixSQLQuery } = require('./qwenService');
-      const fixedSQL = await fixSQLQuery(sqlQuery, identifiedTables, error.message);
+      const fixedSQL = await fixSQLQuery(sqlQuery, identifiedTables, error.message, databaseId);
       if (fixedSQL) {
         // Retry with fixed SQL
-        const client = await pool.connect();
-        try {
-          const result = await client.query(fixedSQL);
+        let queryPool = pool;
+        let dbType = 'postgresql';
+        if (databaseId) {
+          queryPool = await getPoolForDatabase(databaseId);
+          const db = await getDatabaseById(databaseId);
+          if (db) {
+            dbType = db.database_type || 'postgresql';
+          }
+        }
+        
+        if (dbType === 'mysql') {
+          const [rows, fields] = await queryPool.query(fixedSQL);
           const retryDuration = Date.now() - startTime;
-          logger.logSQL(fixedSQL, userId, sessionId, retryDuration, result.rowCount);
+          logger.logSQL(fixedSQL, userId, sessionId, retryDuration, Array.isArray(rows) ? rows.length : 0);
           logger.info('✅ Query executed successfully after fix', { userId, sessionId });
           return {
-            rowCount: result.rowCount,
-            rows: result.rows,
-            columns: result.fields.map(f => f.name),
+            rowCount: Array.isArray(rows) ? rows.length : 0,
+            rows: Array.isArray(rows) ? rows : [],
+            columns: fields ? fields.map(f => f.name) : [],
           };
-        } finally {
-          client.release();
+        } else {
+          const client = await queryPool.connect();
+          try {
+            const result = await client.query(fixedSQL);
+            const retryDuration = Date.now() - startTime;
+            logger.logSQL(fixedSQL, userId, sessionId, retryDuration, result.rowCount);
+            logger.info('✅ Query executed successfully after fix', { userId, sessionId });
+            return {
+              rowCount: result.rowCount,
+              rows: result.rows,
+              columns: result.fields.map(f => f.name),
+            };
+          } finally {
+            client.release();
+          }
         }
       }
     }
@@ -74,22 +139,38 @@ async function executeQuery(sqlQuery, identifiedTables = [], userId = null, sess
 // Process a chat message
 async function processMessage(userId, sessionId, userQuestion, chatHistory = []) {
   try {
+    // Get global active database (same for all users)
+    const { getActiveDatabase } = require('./databaseManager');
+    const selectedDatabase = await getActiveDatabase();
+    const databaseId = selectedDatabase ? selectedDatabase.id : null;
+    
     // Check if it's a greeting or non-data query
     const lowerQuestion = userQuestion.toLowerCase().trim();
     const greetings = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'greetings'];
     const isGreeting = greetings.some(g => lowerQuestion === g || lowerQuestion.startsWith(g + ' '));
     
     if (isGreeting) {
+      const dbName = selectedDatabase ? ` (${selectedDatabase.name})` : '';
       return {
         success: true,
-        answer: 'Hello! I\'m your AMAST sales data assistant. I can help you query your database and analyze sales data. Try asking me questions like:\n\n- "Show me total sales this month"\n- "What are the top selling products?"\n- "How many invoices were created last week?"\n- "Show me revenue by outlet"\n\nWhat would you like to know?',
+        answer: `Hello! I'm your AMAST sales data assistant${dbName}. I can help you query your database and analyze sales data. Try asking me questions like:\n\n- "Show me total sales this month"\n- "What are the top selling products?"\n- "How many invoices were created last week?"\n- "Show me revenue by outlet"\n\nWhat would you like to know?`,
+        sqlQuery: null,
+        queryResult: null,
+      };
+    }
+    
+    // Check if database is selected
+    if (!selectedDatabase) {
+      return {
+        success: false,
+        answer: 'Please select a database from Settings before asking questions. Go to Settings → Databases to add and select a database.',
         sqlQuery: null,
         queryResult: null,
       };
     }
     
     // Stage 1: Identify tables
-    const identifiedTables = await identifyTables(userQuestion, chatHistory);
+    const identifiedTables = await identifyTables(userQuestion, chatHistory, databaseId);
     
     if (identifiedTables.length === 0) {
       return {
@@ -101,7 +182,7 @@ async function processMessage(userId, sessionId, userQuestion, chatHistory = [])
     }
     
     // Stage 2: Generate SQL
-    const sqlQuery = await generateSQL(userQuestion, identifiedTables, chatHistory);
+    const sqlQuery = await generateSQL(userQuestion, identifiedTables, chatHistory, databaseId);
     
     // Validate SQL
     const validation = validateSQL(sqlQuery);
@@ -115,7 +196,7 @@ async function processMessage(userId, sessionId, userQuestion, chatHistory = [])
     }
     
     // Execute query (with retry on column errors)
-    const queryResults = await executeQuery(sqlQuery, identifiedTables, userId, sessionId);
+    const queryResults = await executeQuery(sqlQuery, identifiedTables, userId, sessionId, databaseId);
     
     // Stage 3: Refine results
     const answer = await refineResults(userQuestion, sqlQuery, queryResults);

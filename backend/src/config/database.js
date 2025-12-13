@@ -29,7 +29,8 @@ const dbConfig = {
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
   max: 20, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 30000, // Increased from 10000 to 30000 (30 seconds)
+  statement_timeout: 30000, // Query timeout
 };
 
 // Create connection pool
@@ -65,9 +66,37 @@ async function query(text, params) {
   }
 }
 
+// Test database connection before initialization
+async function testConnection() {
+  try {
+    console.log('🔍 Testing database connection...');
+    console.log(`   Host: ${dbConfig.host}:${dbConfig.port}`);
+    console.log(`   Database: ${dbConfig.database}`);
+    console.log(`   User: ${dbConfig.user}`);
+    
+    const testClient = new Client(dbConfig);
+    await testClient.connect();
+    await testClient.query('SELECT NOW()');
+    await testClient.end();
+    console.log('✅ Database connection successful');
+    return true;
+  } catch (error) {
+    console.error('❌ Database connection failed:', error.message);
+    console.error('   Please check:');
+    console.error('   1. Is PostgreSQL running?');
+    console.error('   2. Are the credentials in .env correct?');
+    console.error('   3. Can you reach the database host?');
+    console.error(`   4. Is the database "${dbConfig.database}" accessible?`);
+    throw error;
+  }
+}
+
 // Initialize database tables
 async function initializeDatabase() {
   try {
+    // Test connection first
+    await testConnection();
+    
     console.log('🔧 Initializing database tables...');
     
     // Create chat_app_user table (new table for chat app users)
@@ -125,6 +154,64 @@ async function initializeDatabase() {
       )
     `);
     
+    // Create chat_app_databases table for managing multiple databases (PostgreSQL and MySQL)
+    await query(`
+      CREATE TABLE IF NOT EXISTS chat_app_databases (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        instructions TEXT,
+        database_type VARCHAR(20) NOT NULL DEFAULT 'postgresql',
+        host VARCHAR(255) NOT NULL,
+        port INTEGER NOT NULL DEFAULT 5432,
+        database_name VARCHAR(255) NOT NULL,
+        username VARCHAR(255) NOT NULL,
+        password_encrypted TEXT NOT NULL,
+        ssl_enabled BOOLEAN DEFAULT false,
+        is_active BOOLEAN DEFAULT false,
+        schema_extracted BOOLEAN DEFAULT false,
+        schema_extracted_at TIMESTAMP WITH TIME ZONE,
+        created_by INTEGER REFERENCES chat_app_user(id) ON DELETE SET NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // Add instructions column if it doesn't exist (for existing installations)
+    await query(`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'chat_app_databases' AND column_name = 'instructions'
+        ) THEN
+          ALTER TABLE chat_app_databases ADD COLUMN instructions TEXT;
+        END IF;
+      END $$;
+    `);
+    
+    // Add database_type column if it doesn't exist (for existing installations)
+    await query(`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'chat_app_databases' AND column_name = 'database_type'
+        ) THEN
+          ALTER TABLE chat_app_databases ADD COLUMN database_type VARCHAR(20) NOT NULL DEFAULT 'postgresql';
+        END IF;
+      END $$;
+    `);
+    
+    // Create chat_app_user_selected_database table to track user's selected database
+    await query(`
+      CREATE TABLE IF NOT EXISTS chat_app_user_selected_database (
+        user_id INTEGER PRIMARY KEY REFERENCES chat_app_user(id) ON DELETE CASCADE,
+        database_id INTEGER REFERENCES chat_app_databases(id) ON DELETE SET NULL,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
     // Create indexes
     await query(`
       CREATE INDEX IF NOT EXISTS idx_chat_app_user_username ON chat_app_user(username)
@@ -146,6 +233,12 @@ async function initializeDatabase() {
     `);
     await query(`
       CREATE INDEX IF NOT EXISTS idx_chat_app_logs_user_id ON chat_app_logs(user_id)
+    `);
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_chat_app_databases_is_active ON chat_app_databases(is_active)
+    `);
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_chat_app_databases_created_by ON chat_app_databases(created_by)
     `);
     
     console.log('✅ Database tables initialized');

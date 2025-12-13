@@ -105,3 +105,5 @@ plink -i "intern-ppk (1).ppk" root@47.250.116.135
 - The startup script automatically loads NVM
 - For production, consider using PM2 for process management
 
+
+

@@ -96,3 +96,5 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "  plink -i `"$PPK_FILE`" ${SERVER_USER}@${SERVER_IP}" -ForegroundColor White
 }
 
+
+

@@ -38,3 +38,5 @@ echo "📋 View logs: pm2 logs chatbot-backend"
 echo "🔄 Restart: pm2 restart chatbot-backend"
 echo "⏹️  Stop: pm2 stop chatbot-backend"
 
+
+

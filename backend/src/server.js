@@ -43,6 +43,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/reports', require('./routes/reports'));
+app.use('/api/databases', require('./routes/databases'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

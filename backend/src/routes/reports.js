@@ -1,6 +1,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { query } = require('../config/database');
+const { getActiveDatabase, getPoolForDatabase } = require('../services/databaseManager');
 const { callQwenAPI } = require('../config/qwen');
 const { getPDFContent } = require('../services/pdfService');
 const logger = require('../services/loggerService');
@@ -10,9 +11,31 @@ const router = express.Router();
 // All routes require authentication
 router.use(authenticateToken);
 
+// Helper function to get query function for active database
+async function getQueryFunction() {
+  const activeDatabase = await getActiveDatabase();
+  if (!activeDatabase) {
+    throw new Error('No database selected. Please select a database in Settings.');
+  }
+  
+  const pool = await getPoolForDatabase(activeDatabase.id);
+  
+  // Return a query function that uses the active database pool
+  return async (queryText, params) => {
+    if (activeDatabase.database_type === 'mysql') {
+      const [rows] = await pool.query(queryText, params);
+      return { rows };
+    } else {
+      // PostgreSQL
+      return await pool.query(queryText, params);
+    }
+  };
+}
+
 // Generate comprehensive AI report
 router.post('/generate', async (req, res) => {
   try {
+    const queryFn = await getQueryFunction();
     const { reportType = 'comprehensive', period = 'year' } = req.body;
     const userId = req.user.userId;
 
@@ -42,7 +65,7 @@ router.post('/generate', async (req, res) => {
     // Gather comprehensive data
     const dataPromises = {
       // Sales Overview
-      salesOverview: query(`
+      salesOverview: queryFn(`
         SELECT 
           COUNT(*) as total_invoices,
           COALESCE(SUM(grand_total), 0) as total_revenue,
@@ -55,7 +78,7 @@ router.post('/generate', async (req, res) => {
       `, [startDate, now]),
 
       // Top Outlets
-      topOutlets: query(`
+      topOutlets: queryFn(`
         SELECT 
           o.name as outlet_name,
           o.price_group,
@@ -73,7 +96,7 @@ router.post('/generate', async (req, res) => {
       `, [startDate, now]),
 
       // Top Products
-      topProducts: query(`
+      topProducts: queryFn(`
         SELECT 
           s.name as product_name,
           s.category,
@@ -93,7 +116,7 @@ router.post('/generate', async (req, res) => {
       `, [startDate, now]),
 
       // Sales Trend
-      salesTrend: query(`
+      salesTrend: queryFn(`
         SELECT 
           TO_CHAR(date, 'YYYY-MM') as month,
           COUNT(*) as invoice_count,
@@ -106,7 +129,7 @@ router.post('/generate', async (req, res) => {
       `, [startDate, now]),
 
       // Inventory Status
-      inventoryStatus: query(`
+      inventoryStatus: queryFn(`
         SELECT 
           COUNT(DISTINCT sku_id) as total_products,
           COUNT(*) as total_locations,
@@ -118,7 +141,7 @@ router.post('/generate', async (req, res) => {
       `),
 
       // Price Group Analysis
-      priceGroupAnalysis: query(`
+      priceGroupAnalysis: queryFn(`
         SELECT 
           o.price_group,
           COUNT(DISTINCT o.id) as outlet_count,
@@ -134,7 +157,7 @@ router.post('/generate', async (req, res) => {
       `, [startDate, now]),
 
       // Credit Notes
-      creditNotes: query(`
+      creditNotes: queryFn(`
         SELECT 
           COUNT(*) as total_credit_notes,
           COALESCE(SUM(grand_total), 0) as total_amount
@@ -144,7 +167,7 @@ router.post('/generate', async (req, res) => {
       `, [startDate, now]),
 
       // Category Performance
-      categoryPerformance: query(`
+      categoryPerformance: queryFn(`
         SELECT 
           s.category,
           COUNT(DISTINCT s.id) as product_count,

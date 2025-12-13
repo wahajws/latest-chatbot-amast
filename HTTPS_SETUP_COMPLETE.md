@@ -102,3 +102,5 @@ The application is now fully configured and accessible via HTTPS. You can:
 
 - `/etc/nginx/sites-available/talbot.amastsales-sandbox.com` - Updated with HTTPS configuration
 
+
+

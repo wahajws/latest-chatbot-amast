@@ -93,3 +93,5 @@ pm2 logs chatbot-backend --lines 100 --nostream | grep -i error
 4. **For searching**: Use `grep` on log files directly
 5. **For large logs**: Use `tail -n` to limit lines
 
+
+

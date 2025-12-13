@@ -7,6 +7,7 @@ import Chat from './pages/Chat';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import Reports from './pages/Reports';
+import Settings from './pages/Settings';
 import PrivateRoute from './components/PrivateRoute';
 
 function App() {
@@ -48,6 +49,15 @@ function App() {
               <PrivateRoute>
                 <Navigation />
                 <Reports />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <PrivateRoute requireAdmin>
+                <Navigation />
+                <Settings />
               </PrivateRoute>
             }
           />

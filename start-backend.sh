@@ -12,3 +12,5 @@ cd /opt/chatbot/latest-chatbot-amast/backend
 # Start the application
 npm start
 
+
+

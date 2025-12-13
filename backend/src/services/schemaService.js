@@ -1,8 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 const { query } = require('../config/database');
+const { loadSchemaFromFile } = require('./schemaExtractionService');
 
-let cachedSchema = null;
+// Cache for multiple database schemas
+const schemaCache = new Map();
 
 // Load schema from cache file
 function loadSchemaFromCache() {
@@ -45,28 +47,46 @@ function loadSchemaFromCache() {
   }
 }
 
-// Get cached schema
-function getSchema() {
-  if (!cachedSchema) {
-    console.log('⚠️  Schema cache is null, attempting to reload...');
-    console.log(`   Current working directory: ${process.cwd()}`);
-    console.log(`   __dirname: ${__dirname}`);
-    cachedSchema = loadSchemaFromCache();
-    if (!cachedSchema) {
-      console.error('❌ Failed to load schema in getSchema()');
-      console.error('   This will cause table identification to fail!');
-    } else {
-      console.log(`✅ Schema reloaded successfully: ${cachedSchema.total_tables} tables`);
-    }
-  } else {
-    console.log(`✅ Using cached schema: ${cachedSchema.total_tables} tables`);
+// Get schema for a specific database ID
+function getSchema(databaseId = null) {
+  // If no databaseId, try to load from legacy cache file (backward compatibility)
+  if (!databaseId) {
+    return loadSchemaFromCache();
   }
-  return cachedSchema;
+  
+  // Check cache first
+  if (schemaCache.has(databaseId)) {
+    const schema = schemaCache.get(databaseId);
+    console.log(`✅ Using cached schema for database ${databaseId}: ${schema.total_tables} tables`);
+    return schema;
+  }
+  
+  // Try to load from file
+  console.log(`🔍 Loading schema for database ${databaseId}...`);
+  const schema = loadSchemaFromFile(databaseId);
+  
+  if (schema) {
+    schemaCache.set(databaseId, schema);
+    console.log(`✅ Loaded schema for database ${databaseId}: ${schema.total_tables} tables`);
+    return schema;
+  }
+  
+  console.error(`❌ Schema not found for database ${databaseId}`);
+  return null;
+}
+
+// Clear schema cache for a database
+function clearSchemaCache(databaseId) {
+  if (databaseId) {
+    schemaCache.delete(databaseId);
+  } else {
+    schemaCache.clear();
+  }
 }
 
 // Create lightweight schema summary for Stage 1
-function createSchemaSummary() {
-  const schema = getSchema();
+function createSchemaSummary(databaseId = null) {
+  const schema = getSchema(databaseId);
   if (!schema) {
     console.error('❌ createSchemaSummary(): Schema is null, returning empty array');
     return [];
@@ -107,8 +127,8 @@ function createSchemaSummary() {
 }
 
 // Get full schema for specific tables
-function getTablesSchema(tableNames) {
-  const schema = getSchema();
+function getTablesSchema(tableNames, databaseId = null) {
+  const schema = getSchema(databaseId);
   if (!schema) return [];
   
   return tableNames
@@ -134,5 +154,6 @@ module.exports = {
   createSchemaSummary,
   getTablesSchema,
   loadSchemaFromCache,
+  clearSchemaCache,
 };
 

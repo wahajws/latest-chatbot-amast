@@ -1,6 +1,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { query } = require('../config/database');
+const { getActiveDatabase, getPoolForDatabase } = require('../services/databaseManager');
 const logger = require('../services/loggerService');
 
 const router = express.Router();
@@ -8,9 +9,31 @@ const router = express.Router();
 // All routes require authentication
 router.use(authenticateToken);
 
+// Helper function to get query function for active database
+async function getQueryFunction() {
+  const activeDatabase = await getActiveDatabase();
+  if (!activeDatabase) {
+    throw new Error('No database selected. Please select a database in Settings.');
+  }
+  
+  const pool = await getPoolForDatabase(activeDatabase.id);
+  
+  // Return a query function that uses the active database pool
+  return async (queryText, params) => {
+    if (activeDatabase.database_type === 'mysql') {
+      const [rows] = await pool.query(queryText, params);
+      return { rows };
+    } else {
+      // PostgreSQL
+      return await pool.query(queryText, params);
+    }
+  };
+}
+
 // Get key metrics (KPIs)
 router.get('/metrics', async (req, res) => {
   try {
+    const queryFn = await getQueryFunction();
     const { period = 'month' } = req.query; // day, week, month, year
     
     // Calculate date range
@@ -42,7 +65,7 @@ router.get('/metrics', async (req, res) => {
         AND date >= $1
         AND date <= $2
     `;
-    const revenueResult = await query(revenueQuery, [startDate, now]);
+    const revenueResult = await queryFn(revenueQuery, [startDate, now]);
 
     // Total Invoices Count
     const invoicesQuery = `
@@ -52,7 +75,7 @@ router.get('/metrics', async (req, res) => {
         AND date >= $1
         AND date <= $2
     `;
-    const invoicesResult = await query(invoicesQuery, [startDate, now]);
+    const invoicesResult = await queryFn(invoicesQuery, [startDate, now]);
 
     // Active Outlets (outlets with invoices in period)
     const outletsQuery = `
@@ -62,7 +85,7 @@ router.get('/metrics', async (req, res) => {
         AND date >= $1
         AND date <= $2
     `;
-    const outletsResult = await query(outletsQuery, [startDate, now]);
+    const outletsResult = await queryFn(outletsQuery, [startDate, now]);
 
     // Total Outlets
     const totalOutletsQuery = `
@@ -70,7 +93,7 @@ router.get('/metrics', async (req, res) => {
       FROM outlets
       WHERE status = 'active' OR status IS NULL
     `;
-    const totalOutletsResult = await query(totalOutletsQuery);
+    const totalOutletsResult = await queryFn(totalOutletsQuery);
 
     // Inventory Value (current stock) - use inventory table
     const inventoryQuery = `
@@ -80,7 +103,7 @@ router.get('/metrics', async (req, res) => {
     `;
     let inventoryResult = { rows: [{ inventory_value: 0 }] };
     try {
-      inventoryResult = await query(inventoryQuery);
+      inventoryResult = await queryFn(inventoryQuery);
     } catch (e) {
       logger.debug('Inventory query failed, using default', { error: e.message });
     }
@@ -93,7 +116,7 @@ router.get('/metrics', async (req, res) => {
     `;
     let lowStockResult = { rows: [{ low_stock_items: 0 }] };
     try {
-      lowStockResult = await query(lowStockQuery);
+      lowStockResult = await queryFn(lowStockQuery);
     } catch (e) {
       logger.debug('Low stock query failed, using default', { error: e.message });
     }
@@ -106,7 +129,7 @@ router.get('/metrics', async (req, res) => {
     `;
     let outOfStockResult = { rows: [{ out_of_stock_items: 0 }] };
     try {
-      outOfStockResult = await query(outOfStockQuery);
+      outOfStockResult = await queryFn(outOfStockQuery);
     } catch (e) {
       logger.debug('Out of stock query failed, using default', { error: e.message });
     }
@@ -119,7 +142,7 @@ router.get('/metrics', async (req, res) => {
         AND date >= $1
         AND date <= $2
     `;
-    const avgInvoiceResult = await query(avgInvoiceQuery, [startDate, now]);
+    const avgInvoiceResult = await queryFn(avgInvoiceQuery, [startDate, now]);
 
     // Credit Notes Total
     const creditNotesQuery = `
@@ -131,7 +154,7 @@ router.get('/metrics', async (req, res) => {
     `;
     let creditNotesResult = { rows: [{ total_credit_notes: 0 }] };
     try {
-      creditNotesResult = await query(creditNotesQuery, [startDate, now]);
+      creditNotesResult = await queryFn(creditNotesQuery, [startDate, now]);
     } catch (e) {
       // Table might not exist or have different structure
       logger.debug('Credit notes query failed, using default', { error: e.message });
@@ -162,6 +185,7 @@ router.get('/metrics', async (req, res) => {
 // Get sales trend (daily/monthly)
 router.get('/sales-trend', async (req, res) => {
   try {
+    const queryFn = await getQueryFunction();
     const { period = 'month', granularity = 'day' } = req.query; // period: week, month, year; granularity: day, week, month
     
     const now = new Date();
@@ -207,7 +231,7 @@ router.get('/sales-trend', async (req, res) => {
       GROUP BY ${groupBy}, ${dateFormat}
       ORDER BY date_group ASC
     `;
-    const result = await query(trendQuery, [startDate, now]);
+    const result = await queryFn(trendQuery, [startDate, now]);
 
     res.json({
       period,
@@ -265,7 +289,7 @@ router.get('/top-outlets', async (req, res) => {
       ORDER BY total_revenue DESC
       LIMIT $3
     `;
-    const result = await query(outletsQuery, [startDate, now, parseInt(limit)]);
+    const result = await queryFn(outletsQuery, [startDate, now, parseInt(limit)]);
 
     res.json({
       period,
@@ -324,7 +348,7 @@ router.get('/top-products', async (req, res) => {
       LIMIT $3
     `;
 
-    const result = await query(productsQuery, [startDate, now, parseInt(limit)]);
+    const result = await queryFn(productsQuery, [startDate, now, parseInt(limit)]);
 
     res.json({
       period,
@@ -345,6 +369,7 @@ router.get('/top-products', async (req, res) => {
 // Get inventory alerts
 router.get('/inventory-alerts', async (req, res) => {
   try {
+    const queryFn = await getQueryFunction();
     const { limit = 20 } = req.query;
 
     // Low stock items
@@ -392,9 +417,9 @@ router.get('/inventory-alerts', async (req, res) => {
     `;
 
     const [lowStock, outOfStock, negativeStock] = await Promise.all([
-      query(lowStockQuery, [parseInt(limit)]),
-      query(outOfStockQuery, [parseInt(limit)]),
-      query(negativeStockQuery, [parseInt(limit)]),
+      queryFn(lowStockQuery, [parseInt(limit)]),
+      queryFn(outOfStockQuery, [parseInt(limit)]),
+      queryFn(negativeStockQuery, [parseInt(limit)]),
     ]);
 
     res.json({
@@ -431,6 +456,7 @@ router.get('/inventory-alerts', async (req, res) => {
 // Get sales by price group
 router.get('/sales-by-price-group', async (req, res) => {
   try {
+    const queryFn = await getQueryFunction();
     const { period = 'month' } = req.query;
     
     const now = new Date();
@@ -467,7 +493,7 @@ router.get('/sales-by-price-group', async (req, res) => {
     `;
     let result = { rows: [] };
     try {
-      result = await query(priceGroupQuery, [startDate, now]);
+      result = await queryFn(priceGroupQuery, [startDate, now]);
     } catch (e) {
       logger.debug('Price group query failed', { error: e.message });
     }

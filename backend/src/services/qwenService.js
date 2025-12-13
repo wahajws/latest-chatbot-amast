@@ -14,8 +14,8 @@ function estimateTokens(text) {
 }
 
 // Stage 1: Identify relevant tables
-async function identifyTables(userQuestion, chatHistory = []) {
-  const schemaSummary = createSchemaSummary();
+async function identifyTables(userQuestion, chatHistory = [], databaseId = null) {
+  const schemaSummary = createSchemaSummary(databaseId);
   // Limit schema summary to prevent overflow
   const maxSchemaLength = 50000; // ~12,500 tokens
   let schemaSummaryText = JSON.stringify(schemaSummary, null, 2);
@@ -109,8 +109,8 @@ Return ONLY the JSON, no other text.`;
 }
 
 // Stage 2: Generate SQL query
-async function generateSQL(userQuestion, identifiedTables, chatHistory = []) {
-  const fullSchema = getTablesSchema(identifiedTables);
+async function generateSQL(userQuestion, identifiedTables, chatHistory = [], databaseId = null) {
+  const fullSchema = getTablesSchema(identifiedTables, databaseId);
   
   // Limit schema size - remove sample_data and limit columns
   const limitedSchema = fullSchema.map(table => ({
@@ -132,7 +132,7 @@ async function generateSQL(userQuestion, identifiedTables, chatHistory = []) {
   }));
   
   // Limit table names list
-  const allTableNames = createSchemaSummary().map(t => t.name).slice(0, 100).join(', ');
+  const allTableNames = createSchemaSummary(databaseId).map(t => t.name).slice(0, 100).join(', ');
   const pdfContext = getPDFContent(10000); // Reduced from 15000
   
   // Limit chat history
@@ -165,7 +165,77 @@ async function generateSQL(userQuestion, identifiedTables, chatHistory = []) {
   
   const pdfText = pdfContext ? truncateText(pdfContext, maxPdfLength) : '';
   
-  const prompt = `You are a SQL query generator for a PostgreSQL database.
+  // Get database type and instructions to generate appropriate SQL syntax
+  let dbType = 'postgresql';
+  let dbTypeInstructions = '';
+  let databaseInstructions = '';
+  if (databaseId) {
+    try {
+      const { getDatabaseById } = require('./databaseManager');
+      const db = await getDatabaseById(databaseId);
+      if (db) {
+        if (db.database_type) {
+          dbType = db.database_type.toLowerCase();
+        }
+        if (db.instructions) {
+          databaseInstructions = db.instructions;
+        }
+        console.log(`📊 Generating SQL for ${dbType.toUpperCase()} database: ${db.name}`);
+      }
+    } catch (error) {
+      console.warn('⚠️  Could not get database type, defaulting to PostgreSQL:', error.message);
+    }
+  } else {
+    // Fallback: try to get active database
+    try {
+      const { getActiveDatabase } = require('./databaseManager');
+      const activeDb = await getActiveDatabase();
+      if (activeDb) {
+        if (activeDb.database_type) {
+          dbType = activeDb.database_type.toLowerCase();
+        }
+        if (activeDb.instructions) {
+          databaseInstructions = activeDb.instructions;
+        }
+        console.log(`📊 Using active database type: ${dbType.toUpperCase()} (${activeDb.name})`);
+      }
+    } catch (error) {
+      console.warn('⚠️  Could not get active database type, defaulting to PostgreSQL:', error.message);
+    }
+  }
+
+  // Set database-specific instructions
+  if (dbType === 'mysql') {
+    dbTypeInstructions = `
+**CRITICAL MySQL Syntax Rules:**
+- Use LIKE (not ILIKE) for case-insensitive pattern matching. For case-insensitive search, use: LOWER(column) LIKE LOWER('%pattern%')
+- Use backticks (\`) for table and column names if they contain special characters or are reserved words
+- Use LIMIT (not OFFSET ... LIMIT, just LIMIT) for result limiting
+- String comparison is case-insensitive by default with utf8_general_ci collation, but use LOWER() for explicit case-insensitive matching
+- Use CONCAT() for string concatenation (not ||)
+- Date functions: DATE_FORMAT(), YEAR(), MONTH(), DAY() instead of PostgreSQL date functions
+- Use NOW() instead of CURRENT_TIMESTAMP (though CURRENT_TIMESTAMP also works)
+- Use IFNULL() or COALESCE() for null handling
+`;
+  } else {
+    dbTypeInstructions = `
+**CRITICAL PostgreSQL Syntax Rules:**
+- Use ILIKE (not LIKE) for case-insensitive pattern matching (e.g., column ILIKE '%pattern%')
+- Use double quotes (") for table and column identifiers if they contain special characters or are reserved words
+- Use LIMIT ... OFFSET for pagination (e.g., LIMIT 100 OFFSET 0)
+- Use || for string concatenation (e.g., first_name || ' ' || last_name)
+- Date functions: TO_CHAR(), DATE_TRUNC(), EXTRACT(), CURRENT_DATE, CURRENT_TIMESTAMP
+- Use COALESCE() or NULLIF() for null handling
+- Use ::type for type casting (e.g., column::text, date::timestamp)
+- Use DISTINCT ON (column) for unique values per group
+- Use ARRAY_AGG() for aggregating into arrays
+- Use window functions: ROW_NUMBER(), RANK(), DENSE_RANK(), LAG(), LEAD()
+- Boolean values are TRUE/FALSE (not 1/0)
+- Use INTERVAL for date arithmetic (e.g., date + INTERVAL '1 day')
+`;
+  }
+
+  const prompt = `You are a SQL query generator for a ${dbType.toUpperCase()} database.
 
 User Question: "${userQuestion}"
 
@@ -180,8 +250,12 @@ ${allTableNames}
 
 ${pdfText ? `\nApplication Context (AMAST Sales Manual - DMS):\n${pdfText}\n` : ''}
 
+${databaseInstructions ? `\n**Database-Specific Instructions:**\n${databaseInstructions}\n` : ''}
+
 Chat History:
 ${historyJson}
+
+${dbTypeInstructions}
 
 Critical Rules:
 1. **No Foreign Keys**: This database has NO foreign key constraints. Infer relationships from column names.
@@ -190,14 +264,17 @@ Critical Rules:
 4. **Column Names**: Use ONLY column names that exist in the "Available Columns" list above
 5. **DO NOT** use column names that are not in the schema (check the actual column names)
 6. **Query Safety**: SELECT only (no INSERT, UPDATE, DELETE, DROP, ALTER)
+7. **Database Type**: Generate ${dbType.toUpperCase()}-compatible SQL syntax only
 
 Instructions:
-1. Generate a safe SELECT query
+1. Generate a safe SELECT query using ${dbType.toUpperCase()} syntax
 2. Use ONLY column names from the "Available Columns" list
 3. Map business terms to database columns
 4. Handle year partitioning correctly
 5. Include LIMIT for large result sets
-6. Return ONLY the SQL query, no explanation, no markdown, no code blocks
+6. ${dbType === 'mysql' ? 'Use LIKE (not ILIKE) for pattern matching. Use LOWER() for case-insensitive matching.' : 'Use ILIKE (not LIKE) for case-insensitive pattern matching in PostgreSQL. This is critical - PostgreSQL uses ILIKE, not LIKE for case-insensitive searches.'}
+7. ${dbType === 'postgresql' ? 'For PostgreSQL: Use proper PostgreSQL functions (TO_CHAR, DATE_TRUNC, EXTRACT), use || for concatenation, use ::type for casting.' : ''}
+8. Return ONLY the SQL query, no explanation, no markdown, no code blocks
 
 SQL Query:`;
 
@@ -209,7 +286,11 @@ SQL Query:`;
   if (totalLength > 250000) { // Safety margin under 262,144
     console.warn(`⚠️  Prompt too long: ${totalLength} chars (~${estimatedTokens} tokens). Truncating...`);
     // Further truncate if needed
-    finalPrompt = `You are a SQL query generator for a PostgreSQL database.
+    const dbSyntaxNote = dbType === 'mysql' 
+      ? 'Use MySQL syntax: LIKE (not ILIKE), use LOWER() for case-insensitive matching, use backticks for identifiers if needed.'
+      : 'Use PostgreSQL syntax: ILIKE (not LIKE) for case-insensitive matching, use || for concatenation, use ::type for casting, use TO_CHAR/DATE_TRUNC for dates.';
+    
+    finalPrompt = `You are a SQL query generator for a ${dbType.toUpperCase()} database.
 
 User Question: "${userQuestion}"
 
@@ -220,6 +301,8 @@ Available Columns:
 ${truncateText(columnJson, 20000)}
 
 ${pdfText ? `\nApplication Context:\n${truncateText(pdfText, 5000)}\n` : ''}
+
+${dbSyntaxNote}
 
 Generate a SELECT query using ONLY the columns listed above. Return only SQL, no explanation.`;
     
@@ -320,8 +403,33 @@ function formatResultsSimple(results) {
 }
 
 // Fix SQL query when column errors occur
-async function fixSQLQuery(sqlQuery, identifiedTables, errorMessage) {
-  const fullSchema = getTablesSchema(identifiedTables);
+async function fixSQLQuery(sqlQuery, identifiedTables, errorMessage, databaseId = null) {
+  const fullSchema = getTablesSchema(identifiedTables, databaseId);
+  
+  // Get database type
+  let dbType = 'postgresql';
+  if (databaseId) {
+    try {
+      const { getDatabaseById } = require('./databaseManager');
+      const db = await getDatabaseById(databaseId);
+      if (db && db.database_type) {
+        dbType = db.database_type.toLowerCase();
+      }
+    } catch (error) {
+      console.warn('⚠️  Could not get database type for fixSQLQuery, defaulting to PostgreSQL:', error.message);
+    }
+  } else {
+    // Fallback: try to get active database
+    try {
+      const { getActiveDatabase } = require('./databaseManager');
+      const activeDb = await getActiveDatabase();
+      if (activeDb && activeDb.database_type) {
+        dbType = activeDb.database_type.toLowerCase();
+      }
+    } catch (error) {
+      console.warn('⚠️  Could not get active database type for fixSQLQuery, defaulting to PostgreSQL:', error.message);
+    }
+  }
   
   // Create compact column list
   const columnList = fullSchema.map(table => ({
@@ -334,7 +442,11 @@ async function fixSQLQuery(sqlQuery, identifiedTables, errorMessage) {
     columnJson = truncateText(columnJson, 30000);
   }
   
-  const prompt = `A SQL query failed with this error: "${errorMessage}"
+  const dbSyntaxNote = dbType === 'mysql'
+    ? '\n**CRITICAL: This is a MySQL database. Use LIKE (not ILIKE) for pattern matching. Use LOWER() for case-insensitive matching. Use backticks for identifiers if needed.**'
+    : '\n**This is a PostgreSQL database. Use ILIKE for case-insensitive pattern matching.**';
+  
+  const prompt = `A SQL query for a ${dbType.toUpperCase()} database failed with this error: "${errorMessage}"
 
 The SQL query that failed:
 ${sqlQuery}
@@ -343,10 +455,13 @@ Available columns in the identified tables:
 ${columnJson}
 
 Your task:
-1. Identify which column name is incorrect
+1. Identify which column name or syntax is incorrect
 2. Find the correct column name from the "Available Columns" list above
-3. Fix the SQL query by replacing the incorrect column with the correct one
-4. Return ONLY the corrected SQL query, no explanation, no markdown, no code blocks
+3. Fix the SQL query by replacing the incorrect column/syntax with the correct one
+4. ${dbType === 'mysql' ? 'Ensure you use LIKE (not ILIKE) and MySQL-compatible syntax.' : 'Ensure you use PostgreSQL-compatible syntax.'}
+5. Return ONLY the corrected SQL query, no explanation, no markdown, no code blocks
+
+${dbSyntaxNote}
 
 Corrected SQL Query:`;
 
