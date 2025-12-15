@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -11,21 +11,77 @@ try {
   vscDarkPlus = {};
 }
 import MessageActions from './MessageActions';
+import api from '../../services/api';
 import './ChatArea.css';
 
-function ChatArea({ messages, loading, messagesEndRef, onEditSql }) {
+function ChatArea({ messages, loading, messagesEndRef, onEditSql, selectedDatabase }) {
+  const [suggestions, setSuggestions] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
+  useEffect(() => {
+    if (selectedDatabase && messages.length === 0) {
+      loadSuggestions();
+    } else if (!selectedDatabase) {
+      setSuggestions([]);
+    }
+  }, [selectedDatabase?.id, messages.length]);
+
+  const loadSuggestions = async () => {
+    setLoadingSuggestions(true);
+    try {
+      const response = await api.get('/chat/suggestions');
+      setSuggestions(response.data.suggestions || []);
+    } catch (error) {
+      console.error('Error loading suggestions:', error);
+      // Fallback to default suggestions
+      setSuggestions([
+        'What was the revenue last month?',
+        'Show me top 10 outlets by sales',
+        'Compare sales this year and last year',
+        'What are the best selling products?',
+        'Show me recent transactions',
+        'What is the total inventory value?'
+      ]);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
   return (
     <div className="chat-area">
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="empty-state">
             <h2>How can I help you today?</h2>
-            <p>Ask me anything about the AMAST database</p>
-            <div className="example-questions">
-              <div className="example-question">What was the revenue last month?</div>
-              <div className="example-question">Show me top 10 outlets by sales</div>
-              <div className="example-question">Compare sales this year and last year</div>
-            </div>
+            <p>Ask me anything about the {selectedDatabase?.name || 'AMAST'} database</p>
+            {loadingSuggestions ? (
+              <div className="example-questions-loading">
+                <div className="loading-spinner-small"></div>
+                <span>Generating suggestions...</span>
+              </div>
+            ) : suggestions.length > 0 ? (
+              <div className="example-questions">
+                {suggestions.map((suggestion, index) => (
+                  <div 
+                    key={index} 
+                    className="example-question"
+                    onClick={() => {
+                      // Dispatch custom event that parent can listen to
+                      const event = new CustomEvent('chatSuggestionClick', { detail: suggestion });
+                      window.dispatchEvent(event);
+                    }}
+                  >
+                    {suggestion}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="example-questions">
+                <div className="example-question">What was the revenue last month?</div>
+                <div className="example-question">Show me top 10 outlets by sales</div>
+                <div className="example-question">Compare sales this year and last year</div>
+              </div>
+            )}
           </div>
         )}
         
@@ -81,18 +137,18 @@ function ChatArea({ messages, loading, messagesEndRef, onEditSql }) {
                           language="sql" 
                           style={vscDarkPlus}
                           customStyle={{
-                            background: 'rgba(15, 23, 42, 0.98)',
+                            background: '#ffffff',
                             padding: '24px',
                             borderRadius: '16px',
                             margin: '0',
                             fontSize: '14px',
                             lineHeight: '1.8',
-                            color: '#e2e8f0',
+                            color: '#475569',
                             textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
                           }}
                           codeTagProps={{
                             style: {
-                              color: '#e2e8f0',
+                              color: '#475569',
                               fontFamily: "'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', 'Courier New', monospace",
                             }
                           }}

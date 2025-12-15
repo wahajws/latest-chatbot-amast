@@ -212,6 +212,60 @@ async function initializeDatabase() {
       )
     `);
     
+    // Create chat_app_dashboard_items table for storing dashboard widgets/insights
+    await query(`
+      CREATE TABLE IF NOT EXISTS chat_app_dashboard_items (
+        id SERIAL PRIMARY KEY,
+        database_id INTEGER REFERENCES chat_app_databases(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        widget_type VARCHAR(50) NOT NULL,
+        widget_config JSONB NOT NULL,
+        sql_query TEXT,
+        position INTEGER DEFAULT 0,
+        width INTEGER DEFAULT 4,
+        height INTEGER DEFAULT 3,
+        is_active BOOLEAN DEFAULT true,
+        created_by INTEGER REFERENCES chat_app_user(id) ON DELETE SET NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // Add database_id column if it doesn't exist (for existing installations)
+    await query(`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'chat_app_dashboard_items' AND column_name = 'database_id'
+        ) THEN
+          ALTER TABLE chat_app_dashboard_items ADD COLUMN database_id INTEGER REFERENCES chat_app_databases(id) ON DELETE CASCADE;
+        END IF;
+      END $$;
+    `);
+    
+    // Deactivate old dashboard items with NULL database_id (created before database_id was added)
+    await query(`
+      UPDATE chat_app_dashboard_items 
+      SET is_active = false 
+      WHERE database_id IS NULL AND is_active = true
+    `);
+    
+    // Add indexes for dashboard items
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_chat_app_dashboard_items_position ON chat_app_dashboard_items(position)
+    `);
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_chat_app_dashboard_items_created_by ON chat_app_dashboard_items(created_by)
+    `);
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_chat_app_dashboard_items_is_active ON chat_app_dashboard_items(is_active)
+    `);
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_chat_app_dashboard_items_database_id ON chat_app_dashboard_items(database_id)
+    `);
+    
     // Create indexes
     await query(`
       CREATE INDEX IF NOT EXISTS idx_chat_app_user_username ON chat_app_user(username)

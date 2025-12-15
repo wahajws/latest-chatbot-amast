@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import Guide from './pages/Guide';
 import PrivateRoute from './components/PrivateRoute';
 
 function App() {
@@ -58,6 +59,15 @@ function App() {
               <PrivateRoute requireAdmin>
                 <Navigation />
                 <Settings />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/guide"
+            element={
+              <PrivateRoute>
+                <Navigation />
+                <Guide />
               </PrivateRoute>
             }
           />

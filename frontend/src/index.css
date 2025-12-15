@@ -5,16 +5,13 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "SF Pro Display", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: 
-    radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
-    radial-gradient(circle at 100% 100%, rgba(168, 85, 247, 0.15) 0%, transparent 50%),
-    linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  background: #F7F9FC;
   background-attachment: fixed;
-  color: #f8fafc;
-  line-height: 1.7;
+  color: #475569;
+  line-height: 1.6;
   font-weight: 400;
   letter-spacing: -0.01em;
 }
@@ -33,30 +30,30 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.3);
+  background: rgba(241, 245, 249, 0.5);
   border-radius: 12px;
   border: 2px solid transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
   border-radius: 12px;
-  border: 2px solid rgba(15, 23, 42, 0.5);
-  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.1);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #818cf8 0%, #a78bfa 50%, #c084fc 100%);
+  background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
   box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.4);
 }
 
 /* Selection styling */
 ::selection {
-  background: rgba(99, 102, 241, 0.4);
-  color: #ffffff;
+  background: rgba(59, 130, 246, 0.2);
+  color: #475569;
 }
 
 ::-moz-selection {
-  background: rgba(99, 102, 241, 0.4);
-  color: #ffffff;
+  background: rgba(59, 130, 246, 0.2);
+  color: #475569;
 }

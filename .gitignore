@@ -19,6 +19,9 @@ backend/uploads/
 output/
 *.log
 
+# Database schemas (contain sensitive data)
+backend/schemas/
+
 # IDE
 .vscode/
 .idea/

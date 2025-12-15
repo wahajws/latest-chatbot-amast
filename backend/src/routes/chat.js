@@ -8,6 +8,7 @@ const {
   updateSessionTitle,
   deleteSession,
 } = require('../services/chatService');
+const { generateChatSuggestions } = require('../services/chatSuggestionsService');
 const logger = require('../services/loggerService');
 
 const router = express.Router();
@@ -200,6 +201,27 @@ router.post('/sessions/:id/execute-sql', async (req, res) => {
     res.status(500).json({ 
       error: `SQL execution failed: ${error.message}`,
       details: error.message
+    });
+  }
+});
+
+// Get AI-generated chat suggestions based on schema
+router.get('/suggestions', async (req, res) => {
+  try {
+    const suggestions = await generateChatSuggestions();
+    res.json({ suggestions });
+  } catch (error) {
+    logger.logError(error, req);
+    // Return default suggestions on error
+    res.json({ 
+      suggestions: [
+        'What was the revenue last month?',
+        'Show me top 10 outlets by sales',
+        'Compare sales this year and last year',
+        'What are the best selling products?',
+        'Show me recent transactions',
+        'What is the total inventory value?'
+      ]
     });
   }
 });

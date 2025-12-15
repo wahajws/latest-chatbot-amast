@@ -42,6 +42,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/dashboard-items', require('./routes/dashboardItems'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/databases', require('./routes/databases'));
 

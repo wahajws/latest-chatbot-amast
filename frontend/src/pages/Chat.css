@@ -15,13 +15,9 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
-    radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.12) 0%, transparent 50%),
-    radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.12) 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 70%);
+  background: #F7F9FC;
   pointer-events: none;
   z-index: 0;
-  animation: pulse 20s ease-in-out infinite;
 }
 
 @keyframes pulse {
@@ -40,13 +36,8 @@
   overflow: hidden;
   position: relative;
   z-index: 1;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border-left: 1px solid rgba(99, 102, 241, 0.2);
-  box-shadow: 
-    -4px 0 24px rgba(0, 0, 0, 0.3),
-    inset 1px 0 0 rgba(255, 255, 255, 0.05);
+  background: #F7F9FC;
+  border-left: 1px solid #e2e8f0;
 }
 
 .database-selector-bar {
@@ -54,45 +45,49 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1.5rem;
-  background: rgba(30, 41, 59, 0.8);
-  border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
   backdrop-filter: blur(10px);
   z-index: 10;
 }
 
 .database-selector-bar.no-database {
-  background: rgba(220, 38, 38, 0.1);
-  border-bottom-color: rgba(220, 38, 38, 0.3);
+  background: rgba(239, 68, 68, 0.05);
+  border-bottom-color: rgba(239, 68, 68, 0.2);
 }
 
 .database-selector-info {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  color: #e2e8f0;
+  color: #475569;
   font-size: 0.9rem;
 }
 
 .database-selector-info svg {
-  color: #6366f1;
+  color: #3b82f6;
   flex-shrink: 0;
 }
 
 .database-name {
   font-weight: 500;
-  color: #e2e8f0;
+  color: #475569;
 }
 
 .schema-status {
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
 }
 
 .schema-status.success {
-  background: rgba(34, 197, 94, 0.2);
-  color: #4ade80;
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
 }
 
 .schema-status.warning {
@@ -101,9 +96,9 @@
 }
 
 .settings-link-button {
-  background: rgba(99, 102, 241, 0.2);
+  background: rgba(59, 130, 246, 0.2);
   color: #a5b4fc;
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid rgba(59, 130, 246, 0.3);
   padding: 0.5rem 1rem;
   border-radius: 6px;
   cursor: pointer;
@@ -113,15 +108,15 @@
 }
 
 .settings-link-button:hover {
-  background: rgba(99, 102, 241, 0.3);
-  color: #c7d2fe;
-  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(37, 99, 235, 0.15);
+  color: #1d4ed8;
+  border-color: rgba(37, 99, 235, 0.3);
 }
 
 .database-select {
-  background: rgba(99, 102, 241, 0.2);
+  background: rgba(59, 130, 246, 0.2);
   color: #a5b4fc;
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid rgba(59, 130, 246, 0.3);
   padding: 0.5rem 1rem;
   border-radius: 6px;
   font-size: 0.875rem;
@@ -132,17 +127,17 @@
 }
 
 .database-select:hover {
-  background: rgba(99, 102, 241, 0.3);
-  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(59, 130, 246, 0.3);
+  border-color: rgba(59, 130, 246, 0.5);
 }
 
 .database-select:focus {
   outline: none;
-  background: rgba(99, 102, 241, 0.3);
-  border-color: rgba(99, 102, 241, 0.6);
+  background: rgba(59, 130, 246, 0.3);
+  border-color: rgba(59, 130, 246, 0.6);
 }
 
 .database-select option {
-  background: #1e1b4b;
-  color: #e0e7ff;
+  background: #ffffff;
+  color: #475569;
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import ReactMarkdown from 'react-markdown';
@@ -14,6 +14,51 @@ function Reports() {
   const [error, setError] = useState(null);
   const [period, setPeriod] = useState('year');
   const [reportType, setReportType] = useState('comprehensive');
+  const [selectedDatabase, setSelectedDatabase] = useState(null);
+  const [reportTypes, setReportTypes] = useState([]);
+  const [loadingReportTypes, setLoadingReportTypes] = useState(true);
+
+  useEffect(() => {
+    loadSelectedDatabase();
+  }, []);
+
+  // Reload report types when database changes
+  useEffect(() => {
+    if (selectedDatabase) {
+      loadReportTypes();
+    } else {
+      setReportTypes([]);
+      setLoadingReportTypes(false);
+    }
+  }, [selectedDatabase?.id]);
+
+  const loadSelectedDatabase = async () => {
+    try {
+      const response = await api.get('/databases/selected');
+      setSelectedDatabase(response.data.database);
+    } catch (error) {
+      console.error('Error loading selected database:', error);
+    }
+  };
+
+  const loadReportTypes = async () => {
+    setLoadingReportTypes(true);
+    try {
+      const response = await api.get('/reports/types');
+      const types = response.data.reportTypes || [];
+      setReportTypes(types);
+      
+      // Set default report type if current one is not available
+      if (types.length > 0 && !types.find(t => t.id === reportType)) {
+        setReportType(types[0].id);
+      }
+    } catch (error) {
+      console.error('Error loading report types:', error);
+      setReportTypes([]);
+    } finally {
+      setLoadingReportTypes(false);
+    }
+  };
 
   const generateReport = async () => {
     setLoading(true);
@@ -59,7 +104,7 @@ function Reports() {
     'pre[class*="language-"]': {
       ...vscDarkPlus['pre[class*="language-"]'],
       background: '#1a1a2e',
-      color: '#e2e8f0',
+      color: '#475569',
       border: '1px solid #4a4e69',
       borderRadius: '8px',
       padding: '1em',
@@ -74,51 +119,91 @@ function Reports() {
           <p className="reports-subtitle">Generate comprehensive business intelligence reports powered by AI</p>
         </div>
         <div className="reports-controls">
-          <select
-            value={reportType}
-            onChange={(e) => setReportType(e.target.value)}
-            className="report-type-selector"
-          >
-            <option value="comprehensive">Comprehensive Report</option>
-            <option value="sales">Sales Analysis</option>
-            <option value="inventory">Inventory Analysis</option>
-            <option value="outlets">Outlet Performance</option>
-          </select>
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-            className="period-selector"
-          >
-            <option value="day">Today</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-            <option value="year">This Year</option>
-          </select>
-          <button
-            onClick={generateReport}
-            disabled={loading}
-            className="generate-button"
-          >
-            {loading ? (
-              <>
-                <span className="spinner"></span>
-                Generating...
-              </>
-            ) : (
-              <>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="16" y1="13" x2="8" y2="13"></line>
-                  <line x1="16" y1="17" x2="8" y2="17"></line>
-                  <polyline points="10 9 9 9 8 9"></polyline>
-                </svg>
-                Generate Report
-              </>
-            )}
-          </button>
+          <div className="control-group">
+            <label className="control-label">Report Type</label>
+            <select
+              value={reportType}
+              onChange={(e) => setReportType(e.target.value)}
+              className="report-type-selector"
+              disabled={loadingReportTypes || reportTypes.length === 0}
+              title={loadingReportTypes ? 'Loading report types...' : reportTypes.length === 0 ? 'No report types available' : reportTypes.find(t => t.id === reportType)?.description || ''}
+            >
+              {loadingReportTypes ? (
+                <option value="">Loading...</option>
+              ) : reportTypes.length === 0 ? (
+                <option value="">No reports available</option>
+              ) : (
+                reportTypes.map(type => (
+                  <option key={type.id} value={type.id}>
+                    {type.icon} {type.name}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+          <div className="control-group">
+            <label className="control-label">Time Period</label>
+            <select
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              className="period-selector"
+            >
+              <option value="day">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="year">This Year</option>
+            </select>
+          </div>
+          <div className="control-group generate-group">
+            <button
+              onClick={generateReport}
+              disabled={loading || !selectedDatabase}
+              className="generate-button"
+              title={!selectedDatabase ? 'Please select a database in Settings' : ''}
+            >
+              {loading ? (
+                <>
+                  <span className="spinner"></span>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                  Generate Report
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
+
+      {!selectedDatabase && (
+        <div className="error-banner">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span>No database selected. Please select a database in Settings to generate reports.</span>
+        </div>
+      )}
+
+      {selectedDatabase && (
+        <div className="database-info-banner">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+          </svg>
+          <span>Using database: <strong>{selectedDatabase.name}</strong> ({selectedDatabase.database_type === 'mysql' ? 'MySQL' : 'PostgreSQL'})</span>
+        </div>
+      )}
 
       {error && (
         <div className="error-banner">

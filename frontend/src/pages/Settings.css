@@ -13,7 +13,7 @@
   align-items: center;
   margin-bottom: 48px;
   padding-bottom: 32px;
-  border-bottom: 2px solid rgba(99, 102, 241, 0.3);
+  border-bottom: 2px solid rgba(59, 130, 246, 0.3);
   position: relative;
 }
 
@@ -26,29 +26,29 @@
   height: 2px;
   background: linear-gradient(90deg, 
     transparent, 
-    rgba(99, 102, 241, 0.5) 20%, 
-    rgba(139, 92, 246, 0.5) 50%,
-    rgba(168, 85, 247, 0.5) 80%,
+    rgba(59, 130, 246, 0.5) 20%, 
+    rgba(37, 99, 235, 0.5) 50%,
+    rgba(29, 78, 216, 0.5) 80%,
     transparent);
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
 }
 
 .settings-header h1 {
   margin: 0;
-  font-size: 48px;
-  font-weight: 800;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+  font-size: 32px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   letter-spacing: -0.03em;
-  text-shadow: 0 0 40px rgba(99, 102, 241, 0.5);
-  filter: drop-shadow(0 4px 8px rgba(99, 102, 241, 0.3));
+  text-shadow: 0 0 40px rgba(59, 130, 246, 0.5);
+  filter: drop-shadow(0 4px 8px rgba(59, 130, 246, 0.3));
 }
 
 .create-button {
   padding: 18px 32px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
   color: white;
   border: none;
   border-radius: 12px;
@@ -56,7 +56,7 @@
   font-size: 16px;
   font-weight: 600;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
   position: relative;
   overflow: hidden;
 }
@@ -74,7 +74,7 @@
 
 .create-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
 }
 
 .create-button:hover::before {
@@ -82,7 +82,7 @@
 }
 
 .settings-section {
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(248, 250, 252, 0.8);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: 16px;
@@ -91,15 +91,15 @@
   box-shadow: 
     0 8px 32px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .settings-section h2 {
   margin: 0 0 1.5rem 0;
-  color: #e2e8f0;
+  color: #475569;
   font-size: 1.75rem;
   font-weight: 700;
-  border-bottom: 2px solid rgba(99, 102, 241, 0.3);
+  border-bottom: 2px solid rgba(59, 130, 246, 0.3);
   padding-bottom: 0.75rem;
 }
 
@@ -108,8 +108,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  background: rgba(99, 102, 241, 0.15);
-  border: 2px solid rgba(99, 102, 241, 0.5);
+  background: rgba(59, 130, 246, 0.15);
+  border: 2px solid rgba(59, 130, 246, 0.5);
   border-radius: 12px;
   backdrop-filter: blur(10px);
 }
@@ -123,7 +123,7 @@
 
 .database-info p {
   margin: 0 0 1rem 0;
-  color: #cbd5e1;
+  color: #475569;
 }
 
 .database-details {
@@ -133,17 +133,17 @@
 }
 
 .database-details span {
-  color: #cbd5e1;
+  color: #475569;
   font-size: 0.9rem;
 }
 
 .no-selection {
   padding: 2rem;
   text-align: center;
-  color: #94a3b8;
-  background: rgba(30, 41, 59, 0.4);
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.6);
   border-radius: 12px;
-  border: 2px dashed rgba(99, 102, 241, 0.4);
+  border: 2px dashed rgba(59, 130, 246, 0.4);
 }
 
 .databases-list {
@@ -152,24 +152,24 @@
 }
 
 .database-card {
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.2);
   border-radius: 12px;
   padding: 1.5rem;
-  background: rgba(30, 41, 59, 0.4);
+  background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
 }
 
 .database-card:hover {
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
-  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+  border-color: rgba(59, 130, 246, 0.5);
   transform: translateY(-2px);
 }
 
 .database-card.selected {
-  border-color: rgba(99, 102, 241, 0.8);
-  background: rgba(99, 102, 241, 0.15);
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+  border-color: rgba(59, 130, 246, 0.8);
+  background: rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
 }
 
 .database-header {
@@ -181,22 +181,22 @@
 
 .database-header h3 {
   margin: 0;
-  color: #e2e8f0;
+  color: #475569;
   font-weight: 600;
 }
 
 .selected-badge {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
   font-size: 0.8rem;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
 }
 
 .database-description {
-  color: #cbd5e1;
+  color: #475569;
   margin: 0.5rem 0 1rem 0;
 }
 
@@ -208,12 +208,12 @@
 }
 
 .detail-item {
-  color: #cbd5e1;
+  color: #475569;
   font-size: 0.9rem;
 }
 
 .detail-item strong {
-  color: #e2e8f0;
+  color: #475569;
   margin-right: 0.5rem;
 }
 
@@ -249,14 +249,14 @@
 }
 
 .select-button {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
 .select-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.5);
+  background: linear-gradient(135deg, #7c3aed 0%, #1d4ed8 100%);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
   transform: translateY(-1px);
 }
 
@@ -304,10 +304,10 @@
 .no-databases {
   padding: 2rem;
   text-align: center;
-  color: #94a3b8;
-  background: rgba(30, 41, 59, 0.4);
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.6);
   border-radius: 12px;
-  border: 2px dashed rgba(99, 102, 241, 0.4);
+  border: 2px dashed rgba(59, 130, 246, 0.4);
 }
 
 .modal-overlay {
@@ -324,7 +324,7 @@
 }
 
 .modal-content {
-  background: rgba(15, 23, 42, 0.95);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   border-radius: 16px;
   padding: 2rem;
@@ -332,13 +332,13 @@
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid rgba(59, 130, 246, 0.3);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
 .modal-content h2 {
   margin: 0 0 1.5rem 0;
-  color: #e2e8f0;
+  color: #475569;
   font-size: 1.75rem;
   font-weight: 700;
 }
@@ -350,7 +350,7 @@
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
-  color: #e2e8f0;
+  color: #475569;
   font-weight: 500;
 }
 
@@ -360,12 +360,12 @@
 .form-group textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid rgba(59, 130, 246, 0.3);
   border-radius: 8px;
   font-size: 1rem;
   box-sizing: border-box;
-  background: rgba(30, 41, 59, 0.6);
-  color: #e2e8f0;
+  background: rgba(241, 245, 249, 0.9);
+  color: #475569;
   transition: all 0.2s;
 }
 
@@ -374,8 +374,8 @@
 .form-group input[type="password"]:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: rgba(99, 102, 241, 0.6);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .form-group input[type="text"]::placeholder,
@@ -392,25 +392,25 @@
 .database-type-select {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid rgba(59, 130, 246, 0.3);
   border-radius: 8px;
   font-size: 1rem;
   box-sizing: border-box;
-  background: rgba(30, 41, 59, 0.6);
-  color: #e2e8f0;
+  background: rgba(241, 245, 249, 0.9);
+  color: #475569;
   transition: all 0.2s;
   cursor: pointer;
 }
 
 .database-type-select:focus {
   outline: none;
-  border-color: rgba(99, 102, 241, 0.6);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .database-type-select option {
-  background: #1e293b;
-  color: #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
 }
 
 .form-group textarea {
@@ -426,7 +426,7 @@
 }
 
 .submit-button {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -434,13 +434,13 @@
   cursor: pointer;
   font-size: 1rem;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
   transition: all 0.2s;
 }
 
 .submit-button:hover {
-  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.6);
+  background: linear-gradient(135deg, #7c3aed 0%, #1d4ed8 100%);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.6);
   transform: translateY(-1px);
 }
 

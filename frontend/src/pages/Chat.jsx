@@ -47,6 +47,21 @@ function Chat() {
     scrollToBottom();
   }, [messages]);
 
+  // Listen for suggestion clicks
+  useEffect(() => {
+    const handleSuggestionClick = (event) => {
+      const suggestion = event.detail;
+      if (suggestion && selectedDatabase) {
+        sendMessage(suggestion);
+      }
+    };
+
+    window.addEventListener('chatSuggestionClick', handleSuggestionClick);
+    return () => {
+      window.removeEventListener('chatSuggestionClick', handleSuggestionClick);
+    };
+  }, [selectedDatabase]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -135,6 +150,30 @@ function Chat() {
       if (error.response?.status === 401) {
         window.location.href = '/login';
       }
+    }
+  };
+
+  const updateSessionTitle = async (sessionId, newTitle) => {
+    try {
+      const api = (await import('../services/api')).default;
+      const response = await api.put(`/chat/sessions/${sessionId}`, { title: newTitle });
+      const updatedSession = response.data.session;
+      
+      // Update session in the list
+      setSessions(prev => prev.map(s => 
+        s.id === sessionId ? updatedSession : s
+      ));
+      
+      // Update current session if it's the one being edited
+      if (currentSession?.id === sessionId) {
+        setCurrentSession(updatedSession);
+      }
+    } catch (error) {
+      console.error('Error updating session title:', error);
+      if (error.response?.status === 401) {
+        window.location.href = '/login';
+      }
+      throw error;
     }
   };
 
@@ -258,6 +297,7 @@ function Chat() {
         onNewChat={createNewSession}
         onSelectSession={selectSession}
         onDeleteSession={deleteSession}
+        onUpdateSessionTitle={updateSessionTitle}
         user={user}
         onLogout={logout}
       />
@@ -312,6 +352,7 @@ function Chat() {
           loading={loading}
           messagesEndRef={messagesEndRef}
           onEditSql={handleEditSql}
+          selectedDatabase={selectedDatabase}
         />
         <InputArea
           onSendMessage={sendMessage}
