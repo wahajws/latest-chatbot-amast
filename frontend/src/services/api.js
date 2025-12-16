@@ -24,6 +24,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 300000, // 5 minutes (300 seconds) for long-running requests like yearly reports
 });
 
 // Add token to requests if available

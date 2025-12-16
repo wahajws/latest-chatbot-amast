@@ -78,7 +78,13 @@ function Reports() {
       }
     } catch (err) {
       console.error('Error generating report:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to generate report');
+      if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        setError('Report generation is taking longer than expected. This is normal for yearly reports. Please try again or select a shorter time period.');
+      } else if (err.response?.status === 504) {
+        setError('Request timed out. The report generation is taking too long. Please try again or select a shorter time period.');
+      } else {
+        setError(err.response?.data?.message || err.message || 'Failed to generate report');
+      }
     } finally {
       setLoading(false);
     }
@@ -249,41 +255,6 @@ function Reports() {
               </svg>
               Download Report
             </button>
-          </div>
-
-          <div className="report-summary-cards">
-            <div className="summary-card">
-              <div className="summary-icon">💰</div>
-              <div className="summary-content">
-                <div className="summary-label">Total Revenue</div>
-                <div className="summary-value">
-                  RM {parseFloat(report.dataSummary.totalRevenue || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-              </div>
-            </div>
-            <div className="summary-card">
-              <div className="summary-icon">📄</div>
-              <div className="summary-content">
-                <div className="summary-label">Total Invoices</div>
-                <div className="summary-value">{report.dataSummary.totalInvoices.toLocaleString()}</div>
-              </div>
-            </div>
-            <div className="summary-card">
-              <div className="summary-icon">🏪</div>
-              <div className="summary-content">
-                <div className="summary-label">Active Outlets</div>
-                <div className="summary-value">{report.dataSummary.activeOutlets}</div>
-              </div>
-            </div>
-            <div className="summary-card">
-              <div className="summary-icon">📊</div>
-              <div className="summary-content">
-                <div className="summary-label">Data Points</div>
-                <div className="summary-value">
-                  {report.dataSummary.topOutletsCount} outlets, {report.dataSummary.topProductsCount} products
-                </div>
-              </div>
-            </div>
           </div>
 
           <div className="report-body">

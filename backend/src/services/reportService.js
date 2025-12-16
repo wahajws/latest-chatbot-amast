@@ -194,7 +194,8 @@ Generate SQL queries that are:
       dbType 
     });
 
-    const llmResponse = await callQwenAPI(messages, 0.7);
+    // Use longer timeout for report generation (5 minutes = 300000ms)
+    const llmResponse = await callQwenAPI(messages, 0.7, 300000);
     
     // Parse LLM response to extract SQL queries and report structure
     const reportData = parseLLMReportResponse(llmResponse, activeDb.id, dbType, startDate, now);
