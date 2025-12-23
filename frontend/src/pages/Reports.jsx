@@ -17,6 +17,10 @@ function Reports() {
   const [selectedDatabase, setSelectedDatabase] = useState(null);
   const [reportTypes, setReportTypes] = useState([]);
   const [loadingReportTypes, setLoadingReportTypes] = useState(true);
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState('');
+  const [jobId, setJobId] = useState(null);
+  const pollingIntervalRef = React.useRef(null);
 
   useEffect(() => {
     loadSelectedDatabase();
@@ -60,33 +64,102 @@ function Reports() {
     }
   };
 
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const pollReportStatus = async (jobId) => {
+    try {
+      const response = await api.get(`/reports/status/${jobId}`);
+      
+      if (response.data.success) {
+        const { status, progress, message, report, error } = response.data;
+        
+        setProgress(progress || 0);
+        setProgressMessage(message || '');
+        
+        if (status === 'completed') {
+          // Stop polling
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          
+          setLoading(false);
+          setReport(report);
+          setProgress(100);
+          setProgressMessage('Report generation completed!');
+        } else if (status === 'failed') {
+          // Stop polling
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          
+          setLoading(false);
+          setError(error || message || 'Report generation failed');
+        }
+        // If status is 'processing', continue polling
+      }
+    } catch (err) {
+      console.error('Error polling report status:', err);
+      // Don't stop polling on network errors, just log them
+    }
+  };
+
   const generateReport = async () => {
     setLoading(true);
     setError(null);
     setReport(null);
+    setProgress(0);
+    setProgressMessage('Starting report generation...');
+    setJobId(null);
+
+    // Clear any existing polling
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
 
     try {
+      // Start report generation - returns jobId immediately
       const response = await api.post('/reports/generate', {
         reportType,
         period,
       });
 
-      if (response.data.success) {
-        setReport(response.data.report);
+      if (response.data.success && response.data.jobId) {
+        const newJobId = response.data.jobId;
+        setJobId(newJobId);
+        setProgress(5);
+        setProgressMessage('Report generation started...');
+
+        // Start polling every 2 seconds
+        pollingIntervalRef.current = setInterval(() => {
+          pollReportStatus(newJobId);
+        }, 2000);
+
+        // Poll immediately
+        pollReportStatus(newJobId);
       } else {
-        setError(response.data.message || 'Failed to generate report');
+        setError(response.data.message || 'Failed to start report generation');
+        setLoading(false);
       }
     } catch (err) {
       console.error('Error generating report:', err);
-      if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
-        setError('Report generation is taking longer than expected. This is normal for yearly reports. Please try again or select a shorter time period.');
-      } else if (err.response?.status === 504) {
-        setError('Request timed out. The report generation is taking too long. Please try again or select a shorter time period.');
-      } else {
-        setError(err.response?.data?.message || err.message || 'Failed to generate report');
-      }
-    } finally {
+      setError(err.response?.data?.message || err.message || 'Failed to generate report');
       setLoading(false);
+      
+      // Clear polling if it was started
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
     }
   };
 
@@ -226,7 +299,21 @@ function Reports() {
         <div className="loading-state">
           <div className="loading-spinner-large"></div>
           <p>Generating comprehensive AI report...</p>
-          <p className="loading-subtitle">This may take 30-60 seconds</p>
+          {progressMessage && (
+            <p className="loading-subtitle">{progressMessage}</p>
+          )}
+          {progress > 0 && (
+            <div className="progress-bar-container" style={{ marginTop: '20px', width: '100%', maxWidth: '400px' }}>
+              <div className="progress-bar" style={{ 
+                width: `${progress}%`, 
+                height: '8px', 
+                backgroundColor: '#3b82f6', 
+                borderRadius: '4px',
+                transition: 'width 0.3s ease'
+              }}></div>
+              <p style={{ marginTop: '8px', fontSize: '14px', color: '#64748b' }}>{progress}%</p>
+            </div>
+          )}
         </div>
       )}
 

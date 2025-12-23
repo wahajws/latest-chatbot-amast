@@ -4,13 +4,38 @@ const { query } = require('../config/database');
 const { getActiveDatabase, getPoolForDatabase } = require('../services/databaseManager');
 const { callQwenAPI } = require('../config/qwen');
 const { getPDFContent } = require('../services/pdfService');
-const { getAvailableReportTypes, generateSchemaAwareReport } = require('../services/reportService');
+const { getAvailableReportTypes, generateSchemaAwareReportWithProgress } = require('../services/reportService');
 const logger = require('../services/loggerService');
+const crypto = require('crypto');
+
+// Simple UUID generator
+function generateJobId() {
+  try {
+    return crypto.randomUUID();
+  } catch (e) {
+    // Fallback: simple ID generator
+    return 'job_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
+}
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticateToken);
+
+// In-memory job storage
+const reportJobs = new Map();
+
+// Clean up old jobs (older than 1 hour)
+setInterval(() => {
+  const oneHourAgo = Date.now() - 60 * 60 * 1000;
+  for (const [jobId, job] of reportJobs.entries()) {
+    if (job.createdAt < oneHourAgo && (job.status === 'completed' || job.status === 'failed')) {
+      reportJobs.delete(jobId);
+      logger.debug(`Cleaned up old report job: ${jobId}`);
+    }
+  }
+}, 5 * 60 * 1000); // Run every 5 minutes
 
 // Helper function to get query function for active database
 async function getQueryFunction() {
@@ -74,7 +99,7 @@ router.get('/types', async (req, res) => {
   }
 });
 
-// Generate comprehensive AI report (schema-aware)
+// Generate comprehensive AI report (schema-aware) - Returns job ID immediately
 router.post('/generate', async (req, res) => {
   try {
     const activeDb = await getActiveDatabase();
@@ -88,33 +113,149 @@ router.post('/generate', async (req, res) => {
     const { reportType = 'comprehensive', period = 'year' } = req.body;
     const userId = req.user.userId;
 
-    logger.info('Generating schema-aware AI report', { userId, reportType, period, databaseId: activeDb.id });
+    // Generate unique job ID
+    const jobId = generateJobId();
 
-    // Use schema-aware report generation
-    const reportData = await generateSchemaAwareReport(reportType, period, activeDb.id);
+    // Create job entry
+    const job = {
+      jobId,
+      userId,
+      reportType,
+      period,
+      databaseId: activeDb.id,
+      status: 'processing',
+      progress: 0,
+      message: 'Initializing report generation...',
+      createdAt: Date.now(),
+      report: null,
+      error: null,
+    };
 
-    // Calculate summary metrics from query results
-    const dataSummary = calculateReportSummary(reportData.queries);
+    reportJobs.set(jobId, job);
 
+    logger.info('Starting report generation job', { jobId, userId, reportType, period, databaseId: activeDb.id });
+
+    // Start background processing (don't await)
+    processReportGeneration(jobId, reportType, period, activeDb.id).catch(error => {
+      logger.error(`Report generation job failed: ${jobId}`, error);
+      const job = reportJobs.get(jobId);
+      if (job) {
+        job.status = 'failed';
+        job.error = error.message;
+        job.message = 'Report generation failed';
+      }
+    });
+
+    // Return immediately with job ID
     res.json({
       success: true,
-      report: {
-        content: reportData.content,
-        reportType,
-        period: reportData.period,
-        generatedAt: reportData.generatedAt,
-        dataSummary,
-      },
+      jobId,
+      status: 'processing',
+      message: 'Report generation started',
     });
   } catch (error) {
     logger.logError(error, req, { reportType: req.body.reportType, period: req.body.period });
     res.status(500).json({ 
       success: false,
-      error: 'Failed to generate report',
+      error: 'Failed to start report generation',
       message: error.message 
     });
   }
 });
+
+// Get report generation status
+router.get('/status/:jobId', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const job = reportJobs.get(jobId);
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job not found',
+      });
+    }
+
+    // Check if user owns this job
+    if (job.userId !== req.user.userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied',
+      });
+    }
+
+    res.json({
+      success: true,
+      status: job.status,
+      progress: job.progress,
+      message: job.message,
+      report: job.report,
+      error: job.error,
+    });
+  } catch (error) {
+    logger.logError(error, req);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get job status',
+      message: error.message,
+    });
+  }
+});
+
+// Background function to process report generation
+async function processReportGeneration(jobId, reportType, period, databaseId) {
+  const job = reportJobs.get(jobId);
+  if (!job) {
+    throw new Error('Job not found');
+  }
+
+  try {
+    // Update progress: 10% - Initializing
+    job.progress = 10;
+    job.message = 'Preparing schema and date range...';
+
+    // Use schema-aware report generation with progress callback
+    const reportData = await generateSchemaAwareReportWithProgress(
+      reportType,
+      period,
+      databaseId,
+      (progress, message) => {
+        const job = reportJobs.get(jobId);
+        if (job) {
+          job.progress = progress;
+          job.message = message;
+        }
+      }
+    );
+
+    // Update progress: 90% - Calculating summary
+    job.progress = 90;
+    job.message = 'Calculating summary metrics...';
+
+    // Calculate summary metrics from query results
+    const dataSummary = calculateReportSummary(reportData.queries);
+
+    // Update progress: 100% - Completed
+    job.progress = 100;
+    job.status = 'completed';
+    job.message = 'Report generation completed';
+    job.report = {
+      content: reportData.content,
+      reportType,
+      period: reportData.period,
+      generatedAt: reportData.generatedAt,
+      dataSummary,
+    };
+
+    logger.info(`Report generation completed: ${jobId}`);
+  } catch (error) {
+    logger.error(`Report generation error for job ${jobId}:`, error);
+    job.status = 'failed';
+    job.error = error.message;
+    job.message = `Error: ${error.message}`;
+    throw error;
+  }
+}
 
 // Helper function to calculate summary from query results
 function calculateReportSummary(queries) {
