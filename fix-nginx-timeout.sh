@@ -3,7 +3,7 @@
 # Script to fix 504 Gateway Timeout by updating nginx configuration
 # Run this on your server with sudo privileges
 
-NGINX_CONFIG="/etc/nginx/sites-available/taibot"
+NGINX_CONFIG="/etc/nginx/sites-enabled/taibot.amastsales-sandbox.com"
 BACKUP_CONFIG="${NGINX_CONFIG}.backup.$(date +%Y%m%d_%H%M%S)"
 
 echo "Fixing nginx timeout configuration for report generation..."
